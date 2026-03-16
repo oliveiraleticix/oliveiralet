@@ -448,6 +448,11 @@ def is_permission_error(exc: Exception) -> bool:
     )
 
 
+def is_job_cancelled_error(exc: Exception) -> bool:
+    msg = str(exc).upper()
+    return "SPARK_JOB_CANCELLED" in msg or "CANCELLED JOB GROUP" in msg
+
+
 def ensure_schema_for_table(spark: SparkSession, table_name: str) -> None:
     parts = table_name.split(".")
     # table
@@ -542,7 +547,15 @@ def main() -> tuple[DataFrame, DataFrame, DataFrame, Optional[str]]:
         print("Preview/Envio Slack desabilitado (build_message_preview=false).")
 
     # Resultado detalhado para inspeção no Databricks.
-    result.orderBy("account", "canu").show(truncate=False)
+    # Em alguns clusters Spark Connect, após erros de permissão o job group pode ser cancelado.
+    # Nesse caso, não interrompemos a execução pois o notebook já exibirá os DataFrames nas etapas seguintes.
+    try:
+        result.orderBy("account", "canu").show(truncate=False)
+    except Exception as exc:
+        if is_job_cancelled_error(exc):
+            print("Aviso: show() final cancelado pelo Spark job group. Prosseguindo com resultados em memória.")
+        else:
+            raise
     return result, account_summary_df, balances, message
 
 
