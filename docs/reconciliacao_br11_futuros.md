@@ -46,6 +46,7 @@ A mensagem diária contém:
 Arquivo principal:
 
 - `br11_futuros_reconciliation.py`
+- Notebook de produção: `notebooks/br11_futuros_reconciliation_producao.py`
 
 Parâmetros (widgets Databricks):
 
@@ -109,6 +110,21 @@ Se ocorrer `TABLE_OR_VIEW_NOT_FOUND`:
    - `tolerance`: tolerância de batimento
    - `slack_webhook_url`: webhook do canal de operação
 4. Agendar execução diária.
+
+### Modelo simplificado para produção
+
+Use o notebook `notebooks/br11_futuros_reconciliation_producao.py`:
+
+- Executa reconciliação em memória
+- Não depende de `CREATE TABLE`
+- Envia diretamente ao Slack
+
+Parâmetros sugeridos do Job:
+
+- `run_date` = data de reconciliação (ou default = ontem)
+- `tolerance` = `0.01`
+- `dry_run` = `false` em produção (`true` para teste)
+- `slack_webhook_scope` e `slack_webhook_key` para buscar webhook via secret
 
 ## Formas corretas de executar (evitar NameError)
 

@@ -68,6 +68,30 @@ recon.dbutils = dbutils
 result_df, summary_df, balances_df, slack_message = recon.br11_futuros_reconciliation()
 print("Execução concluída.")
 
+
+def is_job_cancelled_error(exc: Exception) -> bool:
+    text = str(exc).upper()
+    return "SPARK_JOB_CANCELLED" in text or "CANCELLED JOB GROUP" in text
+
+
+def rerun_reconciliation() -> None:
+    global result_df, summary_df, balances_df, slack_message
+    importlib.reload(recon)
+    recon.dbutils = dbutils
+    result_df, summary_df, balances_df, slack_message = recon.br11_futuros_reconciliation()
+
+
+def display_with_retry(df_supplier, label: str) -> None:
+    try:
+        display(df_supplier())
+    except Exception as exc:
+        if is_job_cancelled_error(exc):
+            print(f"Aviso: Spark cancelou a visualização em '{label}'. Reexecutando reconciliação e tentando novamente...")
+            rerun_reconciliation()
+            display(df_supplier())
+        else:
+            raise
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -123,10 +147,10 @@ print(f"- balances: {balance_exists}")
 # COMMAND ----------
 
 if table_exists_robust(detail_table):
-    display(spark.table(detail_table).orderBy("account", "canu"))
+    display_with_retry(lambda: spark.table(detail_table).orderBy("account", "canu"), "etapa 4 - tabela detail")
 else:
     print(f"Tabela {detail_table} não encontrada. Exibindo DataFrame da execução atual.")
-    display(result_df.orderBy("account", "canu"))
+    display_with_retry(lambda: result_df.orderBy("account", "canu"), "etapa 4 - dataframe em memória")
 
 # COMMAND ----------
 
@@ -136,19 +160,23 @@ else:
 # COMMAND ----------
 
 if table_exists_robust(detail_table):
-    display(
-        spark.sql(
+    display_with_retry(
+        lambda: spark.sql(
             f"""
             SELECT *
             FROM {detail_table}
             WHERE status = 'DIFFERENCE'
             ORDER BY account, canu
             """
-        )
+        ),
+        "etapa 5 - diferenças em tabela",
     )
 else:
     print(f"Tabela {detail_table} não encontrada. Exibindo diferenças do DataFrame da execução atual.")
-    display(result_df.filter("status = 'DIFFERENCE'").orderBy("account", "canu"))
+    display_with_retry(
+        lambda: result_df.filter("status = 'DIFFERENCE'").orderBy("account", "canu"),
+        "etapa 5 - diferenças em memória",
+    )
 
 # COMMAND ----------
 
@@ -158,10 +186,10 @@ else:
 # COMMAND ----------
 
 if table_exists_robust(summary_table):
-    display(spark.table(summary_table).orderBy("account"))
+    display_with_retry(lambda: spark.table(summary_table).orderBy("account"), "etapa 6 - summary")
 else:
     print(f"Tabela {summary_table} não encontrada. Exibindo resumo do DataFrame da execução atual.")
-    display(summary_df.orderBy("account"))
+    display_with_retry(lambda: summary_df.orderBy("account"), "etapa 6 - summary em memória")
 
 # COMMAND ----------
 
@@ -171,10 +199,10 @@ else:
 # COMMAND ----------
 
 if table_exists_robust(balance_table):
-    display(spark.table(balance_table).orderBy("account"))
+    display_with_retry(lambda: spark.table(balance_table).orderBy("account"), "etapa 7 - balances")
 else:
     print(f"Tabela {balance_table} não encontrada. Exibindo saldos do DataFrame da execução atual.")
-    display(balances_df.orderBy("account"))
+    display_with_retry(lambda: balances_df.orderBy("account"), "etapa 7 - balances em memória")
 
 # COMMAND ----------
 

@@ -27,3 +27,7 @@ br11_futuros_reconciliation()
 Notebook pronto (passo a passo) para teste:
 
 - `notebooks/br11_futuros_reconciliation_step_by_step.py`
+
+Notebook enxuto para produção (Job diário + Slack):
+
+- `notebooks/br11_futuros_reconciliation_producao.py`
