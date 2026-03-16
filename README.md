@@ -15,6 +15,7 @@ No Databricks Job, execute `br11_futuros_reconciliation.py` com widgets:
 - `tolerance` (ex.: 0.01)
 - `slack_webhook_url` (opcional)
 - `output_table_prefix` (opcional, para salvar resultado de teste em tabelas)
+- `build_message_preview` (opcional; use `false` no teste)
 
 No notebook, execute com:
 

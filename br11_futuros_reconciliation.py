@@ -136,6 +136,7 @@ class ReconciliationConfig:
     tolerance: float
     slack_webhook_url: Optional[str]
     output_table_prefix: Optional[str]
+    build_message_preview: bool
 
 
 def get_widget(name: str, default: str) -> str:
@@ -161,11 +162,13 @@ def resolve_config() -> ReconciliationConfig:
     tolerance = float(get_widget("tolerance", "0.01"))
     webhook = get_widget("slack_webhook_url", "").strip() or None
     output_table_prefix = get_widget("output_table_prefix", "").strip() or None
+    build_message_preview = get_widget("build_message_preview", "false").strip().lower() in ("1", "true", "yes", "y")
     return ReconciliationConfig(
         run_date=run_date,
         tolerance=tolerance,
         slack_webhook_url=webhook,
         output_table_prefix=output_table_prefix,
+        build_message_preview=build_message_preview,
     )
 
 
@@ -376,10 +379,12 @@ def build_account_summary(result_df: DataFrame) -> DataFrame:
 def build_slack_message(result_df: DataFrame, balance_df: DataFrame, run_date: str) -> str:
     account_summary = build_account_summary(result_df).orderBy("account").collect()
 
+    diff_rows_total = result_df.filter(F.col("status") == "DIFFERENCE").count()
     diffs = (
         result_df.filter(F.col("status") == "DIFFERENCE")
         .select("account", "canu", "debit_diff", "credit_diff", "net_diff")
         .orderBy("account", "canu")
+        .limit(40)
         .collect()
     )
 
@@ -418,8 +423,8 @@ def build_slack_message(result_df: DataFrame, balance_df: DataFrame, run_date: s
                 f"- conta={d['account']} canu={d['canu']}: "
                 f"diff_debito={d['debit_diff']:,.2f}, diff_credito={d['credit_diff']:,.2f}, diff_liquido={d['net_diff']:,.2f}"
             )
-        if len(diffs) > 40:
-            lines.append(f"- ... {len(diffs) - 40} linhas adicionais com diferenca")
+        if diff_rows_total > 40:
+            lines.append(f"- ... {diff_rows_total - 40} linhas adicionais com diferenca")
 
     return "\n".join(lines)
 
@@ -450,26 +455,18 @@ def ensure_schema_for_table(spark: SparkSession, table_name: str) -> None:
 
 def run_reconciliation(
     spark: SparkSession, cfg: ReconciliationConfig
-) -> tuple[DataFrame, DataFrame, DataFrame, str]:
+) -> tuple[DataFrame, DataFrame, DataFrame]:
     calypso = prepare_calypso(spark, cfg)
     sap, balances = prepare_sap(spark, cfg)
     result = reconcile(calypso, sap, cfg.tolerance).cache()
     account_summary_df = build_account_summary(result).cache()
-    message = build_slack_message(result, balances, cfg.run_date)
-    return result, account_summary_df, balances, message
+    return result, account_summary_df, balances
 
 
-def main() -> tuple[DataFrame, DataFrame, DataFrame, str]:
+def main() -> tuple[DataFrame, DataFrame, DataFrame, Optional[str]]:
     spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
     cfg = resolve_config()
-    result, account_summary_df, balances, message = run_reconciliation(spark, cfg)
-    print(message)
-
-    if cfg.slack_webhook_url:
-        send_slack_message(cfg.slack_webhook_url, message)
-        print("Mensagem enviada ao Slack com sucesso.")
-    else:
-        print("Webhook do Slack nao informado; mensagem apenas exibida no log.")
+    result, account_summary_df, balances = run_reconciliation(spark, cfg)
 
     if cfg.output_table_prefix:
         detail_table = f"{cfg.output_table_prefix}_detail"
@@ -486,12 +483,29 @@ def main() -> tuple[DataFrame, DataFrame, DataFrame, str]:
             f"{detail_table}, {summary_table}, {balance_table}"
         )
 
+    message: Optional[str] = None
+    if cfg.slack_webhook_url or cfg.build_message_preview:
+        try:
+            message = build_slack_message(result, balances, cfg.run_date)
+            print(message)
+            if cfg.slack_webhook_url:
+                send_slack_message(cfg.slack_webhook_url, message)
+                print("Mensagem enviada ao Slack com sucesso.")
+            else:
+                print("Preview de mensagem gerado (sem envio para Slack).")
+        except Exception as exc:
+            if cfg.slack_webhook_url:
+                raise
+            print(f"Falha ao gerar preview de mensagem: {exc}")
+    else:
+        print("Preview/Envio Slack desabilitado (build_message_preview=false).")
+
     # Resultado detalhado para inspeção no Databricks.
     result.orderBy("account", "canu").show(truncate=False)
     return result, account_summary_df, balances, message
 
 
-def br11_futuros_reconciliation() -> tuple[DataFrame, DataFrame, DataFrame, str]:
+def br11_futuros_reconciliation() -> tuple[DataFrame, DataFrame, DataFrame, Optional[str]]:
     """
     Entry point amigável para execução via notebook (%run).
     Exemplo:

@@ -12,6 +12,7 @@ dbutils.widgets.text("run_date", "2026-01-31", "run_date (yyyy-MM-dd)")
 dbutils.widgets.text("tolerance", "0.01", "tolerance")
 dbutils.widgets.text("output_table_prefix", "tmp.br11_futuros_recon_20260131", "output_table_prefix")
 dbutils.widgets.text("slack_webhook_url", "", "slack_webhook_url (opcional)")
+dbutils.widgets.text("build_message_preview", "false", "build_message_preview (true/false)")
 
 # COMMAND ----------
 
@@ -26,6 +27,7 @@ run_date = dbutils.widgets.get("run_date").strip()
 tolerance = dbutils.widgets.get("tolerance").strip()
 output_table_prefix = dbutils.widgets.get("output_table_prefix").strip()
 slack_webhook_url = dbutils.widgets.get("slack_webhook_url").strip()
+build_message_preview = dbutils.widgets.get("build_message_preview").strip()
 
 if not output_table_prefix:
     output_table_prefix = f"tmp.br11_futuros_recon_{run_date.replace('-', '')}"
@@ -36,6 +38,7 @@ print(f"- run_date={run_date}")
 print(f"- tolerance={tolerance}")
 print(f"- output_table_prefix={output_table_prefix}")
 print(f"- slack_webhook_url={'preenchido' if slack_webhook_url else 'vazio'}")
+print(f"- build_message_preview={build_message_preview}")
 
 # COMMAND ----------
 

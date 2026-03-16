@@ -53,6 +53,7 @@ Parâmetros (widgets Databricks):
 - `tolerance` (default: `0.01`)
 - `slack_webhook_url` (opcional)
 - `output_table_prefix` (opcional, para modo teste)
+- `build_message_preview` (default: `false`; evita montar mensagem no teste)
 
 ## Testar o resultado da reconciliação (sem Slack)
 
@@ -63,6 +64,7 @@ Para validar primeiro o resultado:
    - `tolerance=0.01`
    - `slack_webhook_url` vazio
    - `output_table_prefix=tmp.br11_futuros_recon_20260131`
+   - `build_message_preview=false`
 2. O script salvará:
    - `tmp.br11_futuros_recon_20260131_detail`
    - `tmp.br11_futuros_recon_20260131_summary`
