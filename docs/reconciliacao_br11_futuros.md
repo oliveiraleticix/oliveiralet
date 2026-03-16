@@ -128,5 +128,6 @@ recon.main()
 ## Observações importantes
 
 - O script foi feito para ser resiliente a variações de nomes de colunas (usa lista de candidatos por campo).
+- No Calypso, também suporta o layout com `debitaccount`/`creditaccount` (uma linha com as duas pernas contábeis).
 - Se a coluna de saldo SAP não existir, o script usa o **net movement** agregado como fallback para saldo final.
 - A filtragem de produto usa o texto `"Futuro DOL"` quando a coluna de produto existir.

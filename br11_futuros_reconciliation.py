@@ -36,10 +36,40 @@ ACCOUNTS_TO_RECONCILE = (
 ACCOUNTS_WITH_SAP_BALANCE = {"1232011006", "4112011005"}
 
 CALYPSO_CANDIDATES = {
-    "posting_date": ("posting_date", "accounting_date", "movement_date", "trade_date", "date"),
+    "posting_date": (
+        "posting_date",
+        "booking_date",
+        "effective_date",
+        "accounting_date",
+        "movement_date",
+        "trade_date",
+        "date",
+        "creation_date",
+        "file_datetime",
+    ),
     "account": ("account", "gl_account", "account_number", "sap_account", "movement__gl_account"),
-    "entity": ("entity", "legal_entity", "company_code", "movement__company_code"),
+    "debit_account": ("debitaccount", "debit_account", "dr_account", "dr_gl_account"),
+    "credit_account": ("creditaccount", "credit_account", "cr_account", "cr_gl_account"),
+    "entity": (
+        "entity",
+        "legal_entity",
+        "company_code",
+        "movement__company_code",
+        "processing_org_attribute_nu_companyerp",
+    ),
     "canu": ("canu", "canal", "movement__canu", "cost_center", "profit_center"),
+    "dr_canu": (
+        "dr_account_accountproperty_nu_centro_lucrocusto",
+        "dr_canu",
+        "debit_canu",
+        "debit_cost_center",
+    ),
+    "cr_canu": (
+        "craccount_accountproperty_nu_centro_lucrocusto",
+        "cr_canu",
+        "credit_canu",
+        "credit_cost_center",
+    ),
     "debit_credit": ("debit_credit", "dc_indicator", "dr_cr", "movement_type"),
     "amount": ("amount", "signed_amount", "movement_amount", "value"),
     "product": ("product", "product_type", "instrument", "trade_family", "underlying"),
@@ -129,17 +159,19 @@ def normalize_amounts(df: DataFrame, amount_col: str, dc_col: Optional[str]) -> 
 def prepare_calypso(spark: SparkSession, cfg: ReconciliationConfig) -> DataFrame:
     df = spark.table(CALYPSO_TABLE)
     posting_date_col = required_col(df, "posting_date", CALYPSO_CANDIDATES["posting_date"])
-    account_col = required_col(df, "account", CALYPSO_CANDIDATES["account"])
     amount_col = required_col(df, "amount", CALYPSO_CANDIDATES["amount"])
     entity_col = optional_col(df, CALYPSO_CANDIDATES["entity"])
     canu_col = optional_col(df, CALYPSO_CANDIDATES["canu"])
+    dr_canu_col = optional_col(df, CALYPSO_CANDIDATES["dr_canu"])
+    cr_canu_col = optional_col(df, CALYPSO_CANDIDATES["cr_canu"])
+    debit_account_col = optional_col(df, CALYPSO_CANDIDATES["debit_account"])
+    credit_account_col = optional_col(df, CALYPSO_CANDIDATES["credit_account"])
+    account_col = optional_col(df, CALYPSO_CANDIDATES["account"])
     dc_col = optional_col(df, CALYPSO_CANDIDATES["debit_credit"])
     product_col = optional_col(df, CALYPSO_CANDIDATES["product"])
 
     base = (
         df.withColumn("posting_date", F.to_date(F.col(posting_date_col)))
-        .withColumn("account", F.col(account_col).cast("string"))
-        .withColumn("canu", F.coalesce(F.col(canu_col).cast("string"), F.lit("UNKNOWN")) if canu_col else F.lit("UNKNOWN"))
         .withColumn("amount_value", F.col(amount_col).cast("double"))
     )
 
@@ -150,11 +182,49 @@ def prepare_calypso(spark: SparkSession, cfg: ReconciliationConfig) -> DataFrame
         base = base.filter(F.upper(F.col(product_col)).contains(PRODUCT_HINT.upper()))
 
     base = base.filter(F.col("posting_date") == F.to_date(F.lit(cfg.run_date)))
-    base = base.filter(F.col("account").isin(*ACCOUNTS_TO_RECONCILE))
-    base = normalize_amounts(base, "amount_value", dc_col)
+
+    # Caso padrão do dataset Calypso: uma linha possui conta de débito e conta de crédito.
+    if debit_account_col and credit_account_col:
+        debit_legs = (
+            base.withColumn("account", F.col(debit_account_col).cast("string"))
+            .withColumn(
+                "canu",
+                F.coalesce(F.col(dr_canu_col).cast("string"), F.lit("UNKNOWN")) if dr_canu_col else F.lit("UNKNOWN"),
+            )
+            .withColumn("debit_amount", F.abs(F.coalesce(F.col("amount_value"), F.lit(0.0))))
+            .withColumn("credit_amount", F.lit(0.0))
+            .select("posting_date", "account", "canu", "debit_amount", "credit_amount")
+        )
+        credit_legs = (
+            base.withColumn("account", F.col(credit_account_col).cast("string"))
+            .withColumn(
+                "canu",
+                F.coalesce(F.col(cr_canu_col).cast("string"), F.lit("UNKNOWN")) if cr_canu_col else F.lit("UNKNOWN"),
+            )
+            .withColumn("debit_amount", F.lit(0.0))
+            .withColumn("credit_amount", F.abs(F.coalesce(F.col("amount_value"), F.lit(0.0))))
+            .select("posting_date", "account", "canu", "debit_amount", "credit_amount")
+        )
+        normalized = debit_legs.unionByName(credit_legs)
+    else:
+        if not account_col:
+            raise ValueError(
+                "Nenhuma coluna de conta encontrada no Calypso. "
+                "Esperado: conta única (account/gl_account) ou par debitaccount/creditaccount."
+            )
+        normalized = (
+            base.withColumn("account", F.col(account_col).cast("string"))
+            .withColumn(
+                "canu",
+                F.coalesce(F.col(canu_col).cast("string"), F.lit("UNKNOWN")) if canu_col else F.lit("UNKNOWN"),
+            )
+        )
+        normalized = normalize_amounts(normalized, "amount_value", dc_col)
+
+    normalized = normalized.filter(F.col("account").isin(*ACCOUNTS_TO_RECONCILE))
 
     return (
-        base.groupBy("posting_date", "account", "canu")
+        normalized.groupBy("posting_date", "account", "canu")
         .agg(
             F.sum("debit_amount").alias("calypso_debit"),
             F.sum("credit_amount").alias("calypso_credit"),
