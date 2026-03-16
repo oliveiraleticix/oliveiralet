@@ -437,6 +437,17 @@ def send_slack_message(webhook_url: str, message: str) -> None:
             raise RuntimeError(f"Erro ao enviar mensagem para Slack. HTTP status: {resp.status}")
 
 
+def is_permission_error(exc: Exception) -> bool:
+    msg = str(exc).upper()
+    return (
+        "PERMISSION_DENIED" in msg
+        or "UNAUTHORIZED_ACCESS" in msg
+        or "CREATE TABLE" in msg
+        or "CREATE SCHEMA" in msg
+        or "DOES NOT HAVE" in msg
+    )
+
+
 def ensure_schema_for_table(spark: SparkSession, table_name: str) -> None:
     parts = table_name.split(".")
     # table
@@ -451,6 +462,20 @@ def ensure_schema_for_table(spark: SparkSession, table_name: str) -> None:
         spark.sql(f"CREATE SCHEMA IF NOT EXISTS {parts[0]}.{parts[1]}")
         return
     raise ValueError(f"Nome de tabela inválido: {table_name}. Use table, schema.table ou catalog.schema.table")
+
+
+def try_save_as_table(df: DataFrame, table_name: str) -> bool:
+    try:
+        df.write.mode("overwrite").saveAsTable(table_name)
+        return True
+    except Exception as exc:
+        if is_permission_error(exc):
+            print(
+                f"Sem permissão para salvar a tabela '{table_name}'. "
+                "Executando em modo somente-memória para teste."
+            )
+            return False
+        raise
 
 
 def run_reconciliation(
@@ -472,16 +497,32 @@ def main() -> tuple[DataFrame, DataFrame, DataFrame, Optional[str]]:
         detail_table = f"{cfg.output_table_prefix}_detail"
         summary_table = f"{cfg.output_table_prefix}_summary"
         balance_table = f"{cfg.output_table_prefix}_balances"
-        ensure_schema_for_table(spark, detail_table)
-        ensure_schema_for_table(spark, summary_table)
-        ensure_schema_for_table(spark, balance_table)
-        result.write.mode("overwrite").saveAsTable(detail_table)
-        account_summary_df.write.mode("overwrite").saveAsTable(summary_table)
-        balances.write.mode("overwrite").saveAsTable(balance_table)
-        print(
-            "Modo teste: resultados salvos em tabelas -> "
-            f"{detail_table}, {summary_table}, {balance_table}"
-        )
+        try:
+            ensure_schema_for_table(spark, detail_table)
+            ensure_schema_for_table(spark, summary_table)
+            ensure_schema_for_table(spark, balance_table)
+        except Exception as exc:
+            if is_permission_error(exc):
+                print(
+                    "Sem permissão para criar/garantir schema do output_table_prefix. "
+                    "Continuando em modo somente-memória para teste."
+                )
+            else:
+                raise
+
+        detail_saved = try_save_as_table(result, detail_table)
+        summary_saved = try_save_as_table(account_summary_df, summary_table)
+        balance_saved = try_save_as_table(balances, balance_table)
+        if detail_saved and summary_saved and balance_saved:
+            print(
+                "Modo teste: resultados salvos em tabelas -> "
+                f"{detail_table}, {summary_table}, {balance_table}"
+            )
+        else:
+            print(
+                "Modo teste: sem persistência em tabela por falta de permissão; "
+                "use as células de fallback do notebook (DataFrames em memória)."
+            )
 
     message: Optional[str] = None
     if cfg.slack_webhook_url or cfg.build_message_preview:
