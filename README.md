@@ -22,3 +22,7 @@ No notebook, execute com:
 %run ./br11_futuros_reconciliation
 br11_futuros_reconciliation()
 ```
+
+Notebook pronto (passo a passo) para teste:
+
+- `notebooks/br11_futuros_reconciliation_step_by_step.py`
