@@ -60,6 +60,8 @@ if repo_root not in sys.path:
 import br11_futuros_reconciliation as recon
 
 importlib.reload(recon)
+# Garante leitura dos widgets quando o script é importado como módulo.
+recon.dbutils = dbutils
 result_df, summary_df, balances_df, slack_message = recon.br11_futuros_reconciliation()
 print("Execução concluída.")
 

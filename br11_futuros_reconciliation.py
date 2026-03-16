@@ -139,9 +139,18 @@ class ReconciliationConfig:
 
 
 def get_widget(name: str, default: str) -> str:
+    # Caminho 1: execução em notebook com dbutils injetado no módulo.
     try:
-        # dbutils existe apenas no Databricks runtime.
         return dbutils.widgets.get(name)  # type: ignore[name-defined]
+    except Exception:
+        pass
+
+    # Caminho 2: módulo importado (sem dbutils global), tenta criar DBUtils do Spark.
+    try:
+        from pyspark.dbutils import DBUtils
+
+        spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
+        return DBUtils(spark).widgets.get(name)
     except Exception:
         return default
 
