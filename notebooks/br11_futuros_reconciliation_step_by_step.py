@@ -79,15 +79,41 @@ detail_table = f"{output_table_prefix}_detail"
 summary_table = f"{output_table_prefix}_summary"
 balance_table = f"{output_table_prefix}_balances"
 
+def table_exists_robust(table_name: str) -> bool:
+    """
+    Em Spark Connect, spark.catalog.tableExists pode retornar falso negativo para nomes fully-qualified.
+    Esta função verifica via SHOW TABLES e fallback de leitura.
+    """
+    parts = table_name.split(".")
+    try:
+        if len(parts) == 3:
+            catalog, schema, table = parts
+            return spark.sql(f"SHOW TABLES IN {catalog}.{schema} LIKE '{table}'").count() > 0
+        if len(parts) == 2:
+            schema, table = parts
+            return spark.sql(f"SHOW TABLES IN {schema} LIKE '{table}'").count() > 0
+    except Exception:
+        pass
+
+    try:
+        spark.table(table_name).limit(1).collect()
+        return True
+    except Exception:
+        return False
+
+detail_exists = table_exists_robust(detail_table)
+summary_exists = table_exists_robust(summary_table)
+balance_exists = table_exists_robust(balance_table)
+
 print("Tabelas de saída:")
 print(f"- {detail_table}")
 print(f"- {summary_table}")
 print(f"- {balance_table}")
 print("")
 print("Existem no metastore?")
-print(f"- detail: {spark.catalog.tableExists(detail_table)}")
-print(f"- summary: {spark.catalog.tableExists(summary_table)}")
-print(f"- balances: {spark.catalog.tableExists(balance_table)}")
+print(f"- detail: {detail_exists}")
+print(f"- summary: {summary_exists}")
+print(f"- balances: {balance_exists}")
 
 # COMMAND ----------
 
@@ -96,7 +122,7 @@ print(f"- balances: {spark.catalog.tableExists(balance_table)}")
 
 # COMMAND ----------
 
-if spark.catalog.tableExists(detail_table):
+if table_exists_robust(detail_table):
     display(spark.table(detail_table).orderBy("account", "canu"))
 else:
     print(f"Tabela {detail_table} não encontrada. Exibindo DataFrame da execução atual.")
@@ -109,7 +135,7 @@ else:
 
 # COMMAND ----------
 
-if spark.catalog.tableExists(detail_table):
+if table_exists_robust(detail_table):
     display(
         spark.sql(
             f"""
@@ -131,7 +157,7 @@ else:
 
 # COMMAND ----------
 
-if spark.catalog.tableExists(summary_table):
+if table_exists_robust(summary_table):
     display(spark.table(summary_table).orderBy("account"))
 else:
     print(f"Tabela {summary_table} não encontrada. Exibindo resumo do DataFrame da execução atual.")
@@ -144,7 +170,7 @@ else:
 
 # COMMAND ----------
 
-if spark.catalog.tableExists(balance_table):
+if table_exists_robust(balance_table):
     display(spark.table(balance_table).orderBy("account"))
 else:
     print(f"Tabela {balance_table} não encontrada. Exibindo saldos do DataFrame da execução atual.")
