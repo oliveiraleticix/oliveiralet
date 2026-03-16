@@ -101,6 +101,30 @@ order by account;
    - `slack_webhook_url`: webhook do canal de operação
 4. Agendar execução diária.
 
+## Formas corretas de executar (evitar NameError)
+
+### Opção A: Databricks Job (Python file task)
+
+Aponte diretamente para o arquivo `br11_futuros_reconciliation.py`.
+Nesse modo, o script executa automaticamente.
+
+### Opção B: Notebook com `%run`
+
+```python
+%run ./br11_futuros_reconciliation
+br11_futuros_reconciliation()
+```
+
+> Se você chamar apenas `br11_futuros_reconciliation` sem `()`, ou sem ter feito `%run`,
+> ocorrerá `NameError`.
+
+### Opção C: Import como módulo Python
+
+```python
+import br11_futuros_reconciliation as recon
+recon.main()
+```
+
 ## Observações importantes
 
 - O script foi feito para ser resiliente a variações de nomes de colunas (usa lista de candidatos por campo).

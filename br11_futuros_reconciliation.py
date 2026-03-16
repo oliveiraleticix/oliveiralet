@@ -345,5 +345,15 @@ def main() -> None:
     result.orderBy("account", "canu").show(truncate=False)
 
 
+def br11_futuros_reconciliation() -> None:
+    """
+    Entry point amigável para execução via notebook (%run).
+    Exemplo:
+      %run ./br11_futuros_reconciliation
+      br11_futuros_reconciliation()
+    """
+    main()
+
+
 if __name__ == "__main__":
     main()
