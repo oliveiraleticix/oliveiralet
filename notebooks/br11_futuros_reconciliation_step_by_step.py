@@ -60,7 +60,8 @@ if repo_root not in sys.path:
 import br11_futuros_reconciliation as recon
 
 importlib.reload(recon)
-recon.br11_futuros_reconciliation()
+result_df, summary_df, balances_df, slack_message = recon.br11_futuros_reconciliation()
+print("Execução concluída.")
 
 # COMMAND ----------
 
@@ -77,6 +78,11 @@ print("Tabelas de saída:")
 print(f"- {detail_table}")
 print(f"- {summary_table}")
 print(f"- {balance_table}")
+print("")
+print("Existem no metastore?")
+print(f"- detail: {spark.catalog.tableExists(detail_table)}")
+print(f"- summary: {spark.catalog.tableExists(summary_table)}")
+print(f"- balances: {spark.catalog.tableExists(balance_table)}")
 
 # COMMAND ----------
 
@@ -85,9 +91,11 @@ print(f"- {balance_table}")
 
 # COMMAND ----------
 
-display(
-    spark.table(detail_table).orderBy("account", "canu")
-)
+if spark.catalog.tableExists(detail_table):
+    display(spark.table(detail_table).orderBy("account", "canu"))
+else:
+    print(f"Tabela {detail_table} não encontrada. Exibindo DataFrame da execução atual.")
+    display(result_df.orderBy("account", "canu"))
 
 # COMMAND ----------
 
@@ -96,16 +104,20 @@ display(
 
 # COMMAND ----------
 
-display(
-    spark.sql(
-        f"""
-        SELECT *
-        FROM {detail_table}
-        WHERE status = 'DIFFERENCE'
-        ORDER BY account, canu
-        """
+if spark.catalog.tableExists(detail_table):
+    display(
+        spark.sql(
+            f"""
+            SELECT *
+            FROM {detail_table}
+            WHERE status = 'DIFFERENCE'
+            ORDER BY account, canu
+            """
+        )
     )
-)
+else:
+    print(f"Tabela {detail_table} não encontrada. Exibindo diferenças do DataFrame da execução atual.")
+    display(result_df.filter("status = 'DIFFERENCE'").orderBy("account", "canu"))
 
 # COMMAND ----------
 
@@ -114,9 +126,11 @@ display(
 
 # COMMAND ----------
 
-display(
-    spark.table(summary_table).orderBy("account")
-)
+if spark.catalog.tableExists(summary_table):
+    display(spark.table(summary_table).orderBy("account"))
+else:
+    print(f"Tabela {summary_table} não encontrada. Exibindo resumo do DataFrame da execução atual.")
+    display(summary_df.orderBy("account"))
 
 # COMMAND ----------
 
@@ -125,9 +139,11 @@ display(
 
 # COMMAND ----------
 
-display(
-    spark.table(balance_table).orderBy("account")
-)
+if spark.catalog.tableExists(balance_table):
+    display(spark.table(balance_table).orderBy("account"))
+else:
+    print(f"Tabela {balance_table} não encontrada. Exibindo saldos do DataFrame da execução atual.")
+    display(balances_df.orderBy("account"))
 
 # COMMAND ----------
 

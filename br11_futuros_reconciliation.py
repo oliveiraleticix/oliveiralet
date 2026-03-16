@@ -423,16 +423,37 @@ def send_slack_message(webhook_url: str, message: str) -> None:
             raise RuntimeError(f"Erro ao enviar mensagem para Slack. HTTP status: {resp.status}")
 
 
-def main() -> None:
-    spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
-    cfg = resolve_config()
+def ensure_schema_for_table(spark: SparkSession, table_name: str) -> None:
+    parts = table_name.split(".")
+    # table
+    if len(parts) == 1:
+        return
+    # schema.table
+    if len(parts) == 2:
+        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {parts[0]}")
+        return
+    # catalog.schema.table
+    if len(parts) == 3:
+        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {parts[0]}.{parts[1]}")
+        return
+    raise ValueError(f"Nome de tabela inválido: {table_name}. Use table, schema.table ou catalog.schema.table")
 
+
+def run_reconciliation(
+    spark: SparkSession, cfg: ReconciliationConfig
+) -> tuple[DataFrame, DataFrame, DataFrame, str]:
     calypso = prepare_calypso(spark, cfg)
     sap, balances = prepare_sap(spark, cfg)
     result = reconcile(calypso, sap, cfg.tolerance).cache()
     account_summary_df = build_account_summary(result).cache()
-
     message = build_slack_message(result, balances, cfg.run_date)
+    return result, account_summary_df, balances, message
+
+
+def main() -> tuple[DataFrame, DataFrame, DataFrame, str]:
+    spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
+    cfg = resolve_config()
+    result, account_summary_df, balances, message = run_reconciliation(spark, cfg)
     print(message)
 
     if cfg.slack_webhook_url:
@@ -445,6 +466,9 @@ def main() -> None:
         detail_table = f"{cfg.output_table_prefix}_detail"
         summary_table = f"{cfg.output_table_prefix}_summary"
         balance_table = f"{cfg.output_table_prefix}_balances"
+        ensure_schema_for_table(spark, detail_table)
+        ensure_schema_for_table(spark, summary_table)
+        ensure_schema_for_table(spark, balance_table)
         result.write.mode("overwrite").saveAsTable(detail_table)
         account_summary_df.write.mode("overwrite").saveAsTable(summary_table)
         balances.write.mode("overwrite").saveAsTable(balance_table)
@@ -455,16 +479,17 @@ def main() -> None:
 
     # Resultado detalhado para inspeção no Databricks.
     result.orderBy("account", "canu").show(truncate=False)
+    return result, account_summary_df, balances, message
 
 
-def br11_futuros_reconciliation() -> None:
+def br11_futuros_reconciliation() -> tuple[DataFrame, DataFrame, DataFrame, str]:
     """
     Entry point amigável para execução via notebook (%run).
     Exemplo:
       %run ./br11_futuros_reconciliation
       br11_futuros_reconciliation()
     """
-    main()
+    return main()
 
 
 if __name__ == "__main__":

@@ -91,6 +91,13 @@ from tmp.br11_futuros_recon_20260131_balances
 order by account;
 ```
 
+Se ocorrer `TABLE_OR_VIEW_NOT_FOUND`:
+
+- Reexecute a etapa de execução da reconciliação antes das consultas.
+- Verifique o `output_table_prefix`.
+- Use prefixo com namespace explícito (ex.: `hive_metastore.tmp.br11_futuros_recon_20260131`).
+- O script cria schema automaticamente quando possível.
+
 ## Execução recomendada (Databricks Jobs)
 
 1. Criar um Job diário (ex.: após carga de Calypso/SAP).
