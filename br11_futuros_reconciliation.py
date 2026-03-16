@@ -6,6 +6,7 @@ Uso no Databricks (Job):
      - run_date: yyyy-MM-dd (default: ontem)
      - tolerance: tolerância numérica (default: 0.01)
      - slack_webhook_url: webhook do Slack (opcional)
+     - output_table_prefix: prefixo para salvar resultados de teste (opcional)
   2) Execute este script como notebook job ou python task.
 """
 
@@ -62,6 +63,7 @@ class ReconciliationConfig:
     run_date: str
     tolerance: float
     slack_webhook_url: Optional[str]
+    output_table_prefix: Optional[str]
 
 
 def get_widget(name: str, default: str) -> str:
@@ -77,7 +79,13 @@ def resolve_config() -> ReconciliationConfig:
     run_date = get_widget("run_date", default_date).strip() or default_date
     tolerance = float(get_widget("tolerance", "0.01"))
     webhook = get_widget("slack_webhook_url", "").strip() or None
-    return ReconciliationConfig(run_date=run_date, tolerance=tolerance, slack_webhook_url=webhook)
+    output_table_prefix = get_widget("output_table_prefix", "").strip() or None
+    return ReconciliationConfig(
+        run_date=run_date,
+        tolerance=tolerance,
+        slack_webhook_url=webhook,
+        output_table_prefix=output_table_prefix,
+    )
 
 
 def first_existing(columns: Iterable[str], candidates: Sequence[str]) -> Optional[str]:
@@ -230,8 +238,8 @@ def reconcile(calypso: DataFrame, sap: DataFrame, tolerance: float) -> DataFrame
     )
 
 
-def build_slack_message(result_df: DataFrame, balance_df: DataFrame, run_date: str) -> str:
-    account_summary = (
+def build_account_summary(result_df: DataFrame) -> DataFrame:
+    return (
         result_df.groupBy("account")
         .agg(
             F.sum("calypso_debit").alias("calypso_debit"),
@@ -241,9 +249,11 @@ def build_slack_message(result_df: DataFrame, balance_df: DataFrame, run_date: s
             F.max(F.when(F.col("status") == "DIFFERENCE", F.lit(1)).otherwise(F.lit(0))).alias("has_difference"),
         )
         .withColumn("status", F.when(F.col("has_difference") == 1, F.lit("DIFFERENCE")).otherwise(F.lit("RECONCILED")))
-        .orderBy("account")
-        .collect()
     )
+
+
+def build_slack_message(result_df: DataFrame, balance_df: DataFrame, run_date: str) -> str:
+    account_summary = build_account_summary(result_df).orderBy("account").collect()
 
     diffs = (
         result_df.filter(F.col("status") == "DIFFERENCE")
@@ -308,6 +318,7 @@ def main() -> None:
     calypso = prepare_calypso(spark, cfg)
     sap, balances = prepare_sap(spark, cfg)
     result = reconcile(calypso, sap, cfg.tolerance).cache()
+    account_summary_df = build_account_summary(result).cache()
 
     message = build_slack_message(result, balances, cfg.run_date)
     print(message)
@@ -317,6 +328,18 @@ def main() -> None:
         print("Mensagem enviada ao Slack com sucesso.")
     else:
         print("Webhook do Slack nao informado; mensagem apenas exibida no log.")
+
+    if cfg.output_table_prefix:
+        detail_table = f"{cfg.output_table_prefix}_detail"
+        summary_table = f"{cfg.output_table_prefix}_summary"
+        balance_table = f"{cfg.output_table_prefix}_balances"
+        result.write.mode("overwrite").saveAsTable(detail_table)
+        account_summary_df.write.mode("overwrite").saveAsTable(summary_table)
+        balances.write.mode("overwrite").saveAsTable(balance_table)
+        print(
+            "Modo teste: resultados salvos em tabelas -> "
+            f"{detail_table}, {summary_table}, {balance_table}"
+        )
 
     # Resultado detalhado para inspeção no Databricks.
     result.orderBy("account", "canu").show(truncate=False)

@@ -52,6 +52,44 @@ Parâmetros (widgets Databricks):
 - `run_date` (formato `yyyy-MM-dd`, default: ontem)
 - `tolerance` (default: `0.01`)
 - `slack_webhook_url` (opcional)
+- `output_table_prefix` (opcional, para modo teste)
+
+## Testar o resultado da reconciliação (sem Slack)
+
+Para validar primeiro o resultado:
+
+1. Execute o script com:
+   - `run_date=2026-01-31` (ou a data desejada)
+   - `tolerance=0.01`
+   - `slack_webhook_url` vazio
+   - `output_table_prefix=tmp.br11_futuros_recon_20260131`
+2. O script salvará:
+   - `tmp.br11_futuros_recon_20260131_detail`
+   - `tmp.br11_futuros_recon_20260131_summary`
+   - `tmp.br11_futuros_recon_20260131_balances`
+3. Consultas de validação:
+
+```sql
+-- Visão detalhada: diferenças por conta/canu
+select *
+from tmp.br11_futuros_recon_20260131_detail
+where status = 'DIFFERENCE'
+order by account, canu;
+```
+
+```sql
+-- Resumo por conta
+select *
+from tmp.br11_futuros_recon_20260131_summary
+order by account;
+```
+
+```sql
+-- Saldos finais SAP das contas que exigem saldo
+select *
+from tmp.br11_futuros_recon_20260131_balances
+order by account;
+```
 
 ## Execução recomendada (Databricks Jobs)
 
