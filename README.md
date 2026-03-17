@@ -5,6 +5,7 @@ Automacao simples de reconciliacao diaria Calypso x SAP no Databricks com envio 
 ## Arquivo principal
 
 - `databricks/reconciliacao_calypso_sap_slack.py`
+- `docs/processo_batimento_calypso_sap.md` (runbook detalhado)
 
 Esse arquivo esta no formato de notebook Python para Databricks e faz:
 1. Recebe `run_date` (ou usa D-1).
