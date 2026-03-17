@@ -70,6 +70,7 @@ Widgets esperados:
 - `slack_webhook_secret_scope`: ex. `monitoring`.
 - `slack_webhook_secret_key`: ex. `reconciliacao_calypso_sap_webhook`.
 - `tolerance`: limiar de divergencia (default `0.01`).
+- `slack_alert_user_id`: user id do Slack para mention em caso de divergencia (opcional).
 
 ## 7) Teste funcional (antes de agendar)
 
@@ -79,6 +80,7 @@ Widgets esperados:
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
    - `tolerance = 0.01`
+   - `slack_alert_user_id = UXXXXXXXX` (opcional)
 3. Executar `Run all`.
 4. Validar:
    - resultado SQL exibido;
@@ -94,6 +96,7 @@ Widgets esperados:
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
    - `tolerance = 0.01`
+   - `slack_alert_user_id = UXXXXXXXX` (opcional)
 4. Definir schedule diario (ex.: 08:00, `America/Sao_Paulo`).
 5. Executar `Run now` para validacao final.
 
@@ -111,6 +114,7 @@ Campos enviados na mensagem:
 - quantidade de contas divergentes;
 - soma das diferencas;
 - top 10 maiores diferencas por conta.
+- mention ao usuario configurado quando houver divergencia.
 
 ## 10) Troubleshooting
 
@@ -124,6 +128,11 @@ Campos enviados na mensagem:
 
 - Webhook salvo incorretamente no Secret (sem `https://` ou com caracteres extras).
 - Regravar secret com valor valido.
+
+### Erro: `Formato invalido de slack_alert_user_id`
+
+- Parametro preenchido fora do padrao.
+- Usar `UXXXXXXXX` ou `<@UXXXXXXXX>`.
 
 ### Erro: `databricks: command not found`
 

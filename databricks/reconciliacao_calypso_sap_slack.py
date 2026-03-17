@@ -7,6 +7,7 @@
 # MAGIC - `slack_webhook_secret_scope` - scope do Databricks Secret.
 # MAGIC - `slack_webhook_secret_key` - chave com webhook URL do Slack.
 # MAGIC - `tolerance` - limite para considerar divergencia (default: 0.01).
+# MAGIC - `slack_alert_user_id` - user id Slack para mention quando houver divergencia (opcional).
 
 # COMMAND ----------
 
@@ -21,17 +22,36 @@ dbutils.widgets.text("run_date", "")
 dbutils.widgets.text("slack_webhook_secret_scope", "monitoring")
 dbutils.widgets.text("slack_webhook_secret_key", "reconciliacao_calypso_sap_webhook")
 dbutils.widgets.text("tolerance", "0.01")
+dbutils.widgets.text("slack_alert_user_id", "")
 
 run_date = dbutils.widgets.get("run_date").strip()
 secret_scope = dbutils.widgets.get("slack_webhook_secret_scope").strip()
 secret_key = dbutils.widgets.get("slack_webhook_secret_key").strip()
 tolerance = float(dbutils.widgets.get("tolerance").strip() or "0.01")
+slack_alert_user_id = dbutils.widgets.get("slack_alert_user_id").strip()
 
 if not run_date:
     run_date = (date.today() - timedelta(days=1)).isoformat()
 
 if not re.match(r"^\d{4}-\d{2}-\d{2}$", run_date):
     raise ValueError(f"Formato invalido de run_date: {run_date}. Use YYYY-MM-DD.")
+
+
+def normalize_slack_user_mention(user_id_raw: str) -> str:
+    if not user_id_raw:
+        return ""
+
+    user_id = user_id_raw
+    mention_match = re.match(r"^<@([A-Z0-9]+)>$", user_id_raw)
+    if mention_match:
+        user_id = mention_match.group(1)
+
+    if not re.match(r"^[A-Z0-9]+$", user_id):
+        raise ValueError(
+            "Formato invalido de slack_alert_user_id. Use 'UXXXXXXXX' ou '<@UXXXXXXXX>'."
+        )
+
+    return f"<@{user_id}>"
 
 # COMMAND ----------
 
@@ -124,6 +144,11 @@ for row in sorted(rows, key=lambda r: abs(float(r["diferenca"] or 0.0)), reverse
     top_linhas.append(f"- `{row['account_number']}`: {float(row['diferenca'] or 0.0):,.2f}")
 
 resumo = "\n".join(top_linhas) if top_linhas else "- sem dados"
+slack_alert_mention = normalize_slack_user_mention(slack_alert_user_id)
+
+mention_line = ""
+if qtd_divergentes > 0 and slack_alert_mention:
+    mention_line = f"\n*Acao:* {slack_alert_mention} favor verificar divergencias."
 
 mensagem = (
     f"{status_emoji} *Reconciliacao Calypso x SAP (BR11)*\n"
@@ -132,6 +157,7 @@ mensagem = (
     f"*Contas divergentes (>|{tolerance}|):* {qtd_divergentes}\n"
     f"*Soma das diferencas:* {total_diferenca:,.2f}\n"
     f"*Top 10 diferencas por conta:*\n{resumo}"
+    f"{mention_line}"
 )
 
 print(mensagem)
