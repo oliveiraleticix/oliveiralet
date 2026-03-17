@@ -11,7 +11,7 @@ Executar diariamente a reconciliacao entre posicao Calypso e movimentos no SAP e
 
 - Fonte Calypso: `etl.br__dataset.calypso_accounting_postings_report_latest`
 - Fonte SAP: `usr.erp.streaming_data`
-- Empresa ERP: `BR11`
+- Empresa ERP: `BR11`, `BR12`, `BR28` (parametrizado por widget)
 - Tipo documento SAP: `YX`
 - Regras Calypso: `NU_CS Fee`, `NU_CS Fee2`
 - Notebook principal: `databricks/reconciliacao_calypso_sap_slack.py`
@@ -67,17 +67,27 @@ Esperado na listagem: key `reconciliacao_calypso_sap_webhook`.
 Widgets esperados:
 
 - `run_date`: data de referencia (`YYYY-MM-DD`); vazio = D-1.
+- `erp_company_code`: empresa da execucao (`BR11`, `BR12`, `BR28`).
 - `slack_webhook_secret_scope`: ex. `monitoring`.
 - `slack_webhook_secret_key`: ex. `reconciliacao_calypso_sap_webhook`.
 - `tolerance`: limiar de divergencia (default `0.01`).
 - `slack_alert_user_ids`: 1+ user ids do Slack para mention em caso de divergencia (opcional).
   - formatos aceitos: `UXXXXXXXX,UYYYYYYYY` ou `<@UXXXXXXXX> <@UYYYYYYYY>`.
 
+### 6.1) Contas configuradas por empresa
+
+As contas ficam versionadas no notebook em `COMPANY_ACCOUNT_CONFIG`.
+
+- `BR11`: mantem a configuracao original (listas Calypso e SAP ja existentes).
+- `BR12`: `1661011994, 4311021996, 8211031003, 1232011001, 4112011002, 7132021001, 8132021001, 7132021015, 8132021014, 1232011006, 4112011005, 7132031002, 8132031001`.
+- `BR28`: `1661011994, 4311021996, 1232011006, 4112011005, 8211031003, 7132031022, 8132031023, 7132031002, 8132031001`.
+
 ## 7) Teste funcional (antes de agendar)
 
 1. Anexar compute ao notebook.
 2. Preencher:
    - `run_date = 2026-03-02` (ou data conhecida com dados)
+   - `erp_company_code = BR11` (ou `BR12` / `BR28`)
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
    - `tolerance = 0.01`
@@ -91,9 +101,13 @@ Widgets esperados:
 ## 8) Criacao do Job diario
 
 1. Databricks `Jobs` -> `Create job`.
-2. Task tipo `Notebook` apontando para `reconciliacao_calypso_sap_slack.py`.
-3. Configurar parametros da task:
+2. Criar 3 tasks (recomendado), todas tipo `Notebook`, apontando para `reconciliacao_calypso_sap_slack.py`:
+   - task 1: `erp_company_code = BR11`
+   - task 2: `erp_company_code = BR12`
+   - task 3: `erp_company_code = BR28`
+3. Configurar parametros de cada task:
    - `run_date =` vazio
+   - `erp_company_code = BR11|BR12|BR28` (conforme task)
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
    - `tolerance = 0.01`
@@ -116,6 +130,7 @@ Campos enviados na mensagem:
 - soma das diferencas;
 - top 10 maiores diferencas por conta.
 - mention ao usuario configurado quando houver divergencia.
+- empresa executada (`BR11`, `BR12`, `BR28`).
 
 ## 10) Troubleshooting
 
@@ -134,6 +149,11 @@ Campos enviados na mensagem:
 
 - Parametro preenchido fora do padrao.
 - Usar IDs/mentions separados por virgula, espaco ou `;`.
+
+### Erro: `erp_company_code invalido`
+
+- Valor fora de `BR11`, `BR12`, `BR28`.
+- Ajustar parametro da task para uma empresa suportada.
 
 ### Erro: `databricks: command not found`
 

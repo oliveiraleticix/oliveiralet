@@ -4,6 +4,7 @@
 # MAGIC
 # MAGIC Widgets:
 # MAGIC - `run_date` (YYYY-MM-DD) - se vazio, usa ontem.
+# MAGIC - `erp_company_code` - empresa alvo (`BR11`, `BR12`, `BR28`).
 # MAGIC - `slack_webhook_secret_scope` - scope do Databricks Secret.
 # MAGIC - `slack_webhook_secret_key` - chave com webhook URL do Slack.
 # MAGIC - `tolerance` - limite para considerar divergencia (default: 0.01).
@@ -19,13 +20,105 @@ from urllib import request
 
 # COMMAND ----------
 
+COMPANY_ACCOUNT_CONFIG = {
+    "BR11": {
+        "calypso_accounts": [
+            "1232011006",
+            "1232011007",
+            "1661011994",
+            "4112011004",
+            "4112011005",
+            "4311021996",
+            "7132021004",
+            "7132031002",
+            "8132021004",
+            "8132031001",
+            "8211031003",
+        ],
+        "sap_accounts": [
+            "1232011006",
+            "1232011007",
+            "4112011004",
+            "4112011005",
+            "4311021996",
+            "7132031002",
+            "8132021004",
+            "8211031003",
+        ],
+    },
+    "BR12": {
+        "calypso_accounts": [
+            "1661011994",
+            "4311021996",
+            "8211031003",
+            "1232011001",
+            "4112011002",
+            "7132021001",
+            "8132021001",
+            "7132021015",
+            "8132021014",
+            "1232011006",
+            "4112011005",
+            "7132031002",
+            "8132031001",
+        ],
+        "sap_accounts": [
+            "1661011994",
+            "4311021996",
+            "8211031003",
+            "1232011001",
+            "4112011002",
+            "7132021001",
+            "8132021001",
+            "7132021015",
+            "8132021014",
+            "1232011006",
+            "4112011005",
+            "7132031002",
+            "8132031001",
+        ],
+    },
+    "BR28": {
+        "calypso_accounts": [
+            "1661011994",
+            "4311021996",
+            "1232011006",
+            "4112011005",
+            "8211031003",
+            "7132031022",
+            "8132031023",
+            "7132031002",
+            "8132031001",
+        ],
+        "sap_accounts": [
+            "1661011994",
+            "4311021996",
+            "1232011006",
+            "4112011005",
+            "8211031003",
+            "7132031022",
+            "8132031023",
+            "7132031002",
+            "8132031001",
+        ],
+    },
+}
+
+
+def to_sql_string_literal_list(values: list[str]) -> str:
+    if not values:
+        raise ValueError("Lista de contas vazia. Verifique configuracao da empresa.")
+    return ", ".join(f"'{v}'" for v in values)
+
 dbutils.widgets.text("run_date", "")
+dbutils.widgets.dropdown("erp_company_code", "BR11", ["BR11", "BR12", "BR28"])
 dbutils.widgets.text("slack_webhook_secret_scope", "monitoring")
 dbutils.widgets.text("slack_webhook_secret_key", "reconciliacao_calypso_sap_webhook")
 dbutils.widgets.text("tolerance", "0.01")
 dbutils.widgets.text("slack_alert_user_ids", "")
 
 run_date = dbutils.widgets.get("run_date").strip()
+erp_company_code = dbutils.widgets.get("erp_company_code").strip().upper()
 secret_scope = dbutils.widgets.get("slack_webhook_secret_scope").strip()
 secret_key = dbutils.widgets.get("slack_webhook_secret_key").strip()
 tolerance = float(dbutils.widgets.get("tolerance").strip() or "0.01")
@@ -36,6 +129,15 @@ if not run_date:
 
 if not re.match(r"^\d{4}-\d{2}-\d{2}$", run_date):
     raise ValueError(f"Formato invalido de run_date: {run_date}. Use YYYY-MM-DD.")
+
+if erp_company_code not in COMPANY_ACCOUNT_CONFIG:
+    raise ValueError(
+        f"erp_company_code invalido: {erp_company_code}. Opcoes: {sorted(COMPANY_ACCOUNT_CONFIG.keys())}"
+    )
+
+company_config = COMPANY_ACCOUNT_CONFIG[erp_company_code]
+calypso_accounts_sql = to_sql_string_literal_list(company_config["calypso_accounts"])
+sap_accounts_sql = to_sql_string_literal_list(company_config["sap_accounts"])
 
 
 def normalize_slack_user_mentions(user_ids_raw: str) -> str:
@@ -78,7 +180,7 @@ WITH tradesCalypso AS (
         FROM etl.br__dataset.calypso_accounting_postings_report_latest
         WHERE accounting_rule IN ('NU_CS Fee', 'NU_CS Fee2')
           AND effective_date = DATE('{run_date}')
-          AND processing_org_attribute_nu_companyerp = 'BR11'
+          AND processing_org_attribute_nu_companyerp = '{erp_company_code}'
       ) p
       LEFT JOIN (
         SELECT *
@@ -95,7 +197,7 @@ WITH tradesCalypso AS (
         FROM etl.br__dataset.calypso_accounting_postings_report_latest
         WHERE accounting_rule IN ('NU_CS Fee', 'NU_CS Fee2')
           AND effective_date = DATE('{run_date}')
-          AND processing_org_attribute_nu_companyerp = 'BR11'
+          AND processing_org_attribute_nu_companyerp = '{erp_company_code}'
       ) p
       LEFT JOIN (
         SELECT *
@@ -104,10 +206,7 @@ WITH tradesCalypso AS (
       ON p.trade_id = t.trade_id
     )
   )
-  WHERE account_number IN (
-    '1232011006', '1232011007', '1661011994', '4112011004', '4112011005',
-    '4311021996', '7132021004', '7132031002', '8132021004', '8132031001', '8211031003'
-  )
+  WHERE account_number IN ({calypso_accounts_sql})
   GROUP BY account_number
 ),
 SAP AS (
@@ -116,12 +215,9 @@ SAP AS (
     SUM(CASE WHEN LOWER(movement__identifier) = 'credit' THEN movement__amount * -1 ELSE 0 END) AS total_creditado_3,
     SUM(CASE WHEN LOWER(movement__identifier) = 'debit' THEN movement__amount ELSE 0 END) AS total_debitado_3
   FROM usr.erp.streaming_data
-  WHERE glaccount__number IN (
-    '1232011006', '1232011007', '4112011004', '4112011005', '4311021996',
-    '7132031002', '8132021004', '8211031003'
-  )
+  WHERE glaccount__number IN ({sap_accounts_sql})
     AND movement__entry_date = DATE('{run_date}')
-    AND movement__erp_company_code = 'BR11'
+    AND movement__erp_company_code = '{erp_company_code}'
     AND movement__erp_document_type = 'YX'
   GROUP BY glaccount__number
 )
@@ -159,8 +255,9 @@ if qtd_divergentes > 0 and slack_alert_mentions:
     mention_line = f"\n*Acao:* {slack_alert_mentions} favor verificar divergencias."
 
 mensagem = (
-    f"{status_emoji} *Reconciliacao Calypso x SAP (BR11)*\n"
+    f"{status_emoji} *Reconciliacao Calypso x SAP ({erp_company_code})*\n"
     f"*Data:* {run_date}\n"
+    f"*Contas monitoradas (Calypso/SAP):* {len(company_config['calypso_accounts'])}/{len(company_config['sap_accounts'])}\n"
     f"*Contas avaliadas:* {total_accounts}\n"
     f"*Contas divergentes (>|{tolerance}|):* {qtd_divergentes}\n"
     f"*Soma das diferencas:* {total_diferenca:,.2f}\n"

@@ -22,6 +22,7 @@ Esse arquivo esta no formato de notebook Python para Databricks e faz:
 3. Crie um Job com agendamento diario (ex.: 08:00).
 4. Configure os parametros do notebook no Job:
    - `run_date` = vazio (usa D-1 automaticamente)
+   - `erp_company_code` = `BR11` (opcoes: `BR11`, `BR12`, `BR28`)
    - `slack_webhook_secret_scope` = `monitoring`
    - `slack_webhook_secret_key` = `reconciliacao_calypso_sap_webhook`
    - `tolerance` = `0.01`
