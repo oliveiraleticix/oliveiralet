@@ -9,7 +9,6 @@
 # MAGIC - `tolerance` - limite para considerar divergencia (default: 0.01).
 # MAGIC - `slack_alert_user_ids` - 1+ user ids Slack para mention quando houver divergencia (opcional).
 # MAGIC   Aceita IDs e/ou mentions separados por virgula, espaco ou ponto e virgula.
-# MAGIC - `slack_alert_user_id` - legado para um unico user id (opcional).
 
 # COMMAND ----------
 
@@ -25,14 +24,12 @@ dbutils.widgets.text("slack_webhook_secret_scope", "monitoring")
 dbutils.widgets.text("slack_webhook_secret_key", "reconciliacao_calypso_sap_webhook")
 dbutils.widgets.text("tolerance", "0.01")
 dbutils.widgets.text("slack_alert_user_ids", "")
-dbutils.widgets.text("slack_alert_user_id", "")
 
 run_date = dbutils.widgets.get("run_date").strip()
 secret_scope = dbutils.widgets.get("slack_webhook_secret_scope").strip()
 secret_key = dbutils.widgets.get("slack_webhook_secret_key").strip()
 tolerance = float(dbutils.widgets.get("tolerance").strip() or "0.01")
 slack_alert_user_ids = dbutils.widgets.get("slack_alert_user_ids").strip()
-slack_alert_user_id = dbutils.widgets.get("slack_alert_user_id").strip()
 
 if not run_date:
     run_date = (date.today() - timedelta(days=1)).isoformat()
@@ -155,8 +152,7 @@ for row in sorted(rows, key=lambda r: abs(float(r["diferenca"] or 0.0)), reverse
     top_linhas.append(f"- `{row['account_number']}`: {float(row['diferenca'] or 0.0):,.2f}")
 
 resumo = "\n".join(top_linhas) if top_linhas else "- sem dados"
-alert_user_values = slack_alert_user_ids or slack_alert_user_id
-slack_alert_mentions = normalize_slack_user_mentions(alert_user_values)
+slack_alert_mentions = normalize_slack_user_mentions(slack_alert_user_ids)
 
 mention_line = ""
 if qtd_divergentes > 0 and slack_alert_mentions:
