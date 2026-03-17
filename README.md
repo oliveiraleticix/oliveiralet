@@ -25,7 +25,7 @@ Esse arquivo esta no formato de notebook Python para Databricks e faz:
    - `slack_webhook_secret_scope` = `monitoring`
    - `slack_webhook_secret_key` = `reconciliacao_calypso_sap_webhook`
    - `tolerance` = `0.01`
-   - `slack_alert_user_id` = `UXXXXXXXX` (opcional; mention quando houver diferenca)
+   - `slack_alert_user_ids` = `UXXXXXXXX,UYYYYYYYY` (opcional; mention quando houver diferenca)
 
 ## Observacoes
 

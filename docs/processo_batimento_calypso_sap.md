@@ -70,7 +70,8 @@ Widgets esperados:
 - `slack_webhook_secret_scope`: ex. `monitoring`.
 - `slack_webhook_secret_key`: ex. `reconciliacao_calypso_sap_webhook`.
 - `tolerance`: limiar de divergencia (default `0.01`).
-- `slack_alert_user_id`: user id do Slack para mention em caso de divergencia (opcional).
+- `slack_alert_user_ids`: 1+ user ids do Slack para mention em caso de divergencia (opcional).
+  - formatos aceitos: `UXXXXXXXX,UYYYYYYYY` ou `<@UXXXXXXXX> <@UYYYYYYYY>`.
 
 ## 7) Teste funcional (antes de agendar)
 
@@ -80,7 +81,7 @@ Widgets esperados:
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
    - `tolerance = 0.01`
-   - `slack_alert_user_id = UXXXXXXXX` (opcional)
+   - `slack_alert_user_ids = UXXXXXXXX,UYYYYYYYY` (opcional)
 3. Executar `Run all`.
 4. Validar:
    - resultado SQL exibido;
@@ -96,7 +97,7 @@ Widgets esperados:
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
    - `tolerance = 0.01`
-   - `slack_alert_user_id = UXXXXXXXX` (opcional)
+   - `slack_alert_user_ids = UXXXXXXXX,UYYYYYYYY` (opcional)
 4. Definir schedule diario (ex.: 08:00, `America/Sao_Paulo`).
 5. Executar `Run now` para validacao final.
 
@@ -129,10 +130,10 @@ Campos enviados na mensagem:
 - Webhook salvo incorretamente no Secret (sem `https://` ou com caracteres extras).
 - Regravar secret com valor valido.
 
-### Erro: `Formato invalido de slack_alert_user_id`
+### Erro: `Formato invalido de slack_alert_user_ids`
 
 - Parametro preenchido fora do padrao.
-- Usar `UXXXXXXXX` ou `<@UXXXXXXXX>`.
+- Usar IDs/mentions separados por virgula, espaco ou `;`.
 
 ### Erro: `databricks: command not found`
 
