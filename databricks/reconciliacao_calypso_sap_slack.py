@@ -261,7 +261,7 @@ mensagem = (
     f"*Contas avaliadas:* {total_accounts}\n"
     f"*Contas divergentes (>|{tolerance}|):* {qtd_divergentes}\n"
     f"*Soma das diferencas:* {total_diferenca:,.2f}\n"
-    f"*Top 10 diferencas por conta:*\n{resumo}"
+    f"*Diferencas por conta:*\n{resumo}"
     f"{mention_line}"
 )
 
