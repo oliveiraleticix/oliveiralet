@@ -307,26 +307,35 @@ divergentes = [r for r in rows if abs(float(r["diferenca"] or 0.0)) > tolerance]
 qtd_divergentes = len(divergentes)
 total_diferenca = sum(float(r["diferenca"] or 0.0) for r in rows)
 status_emoji = ":white_check_mark:" if qtd_divergentes == 0 else ":warning:"
+monitored_calypso_accounts = len(company_config["calypso_accounts"])
+monitored_sap_accounts = len(company_config["sap_accounts"])
+monitored_unique_accounts = len(
+    set(company_config["calypso_accounts"]) | set(company_config["sap_accounts"])
+)
+accounts_with_activity = total_accounts
+accounts_without_activity = max(monitored_unique_accounts - accounts_with_activity, 0)
 
 top_linhas = []
 for row in sorted(rows, key=lambda r: abs(float(r["diferenca"] or 0.0)), reverse=True)[:10]:
     top_linhas.append(f"- `{row['account_number']}`: {float(row['diferenca'] or 0.0):,.2f}")
 
-resumo = "\n".join(top_linhas) if top_linhas else "- sem dados"
+resumo = "\n".join(top_linhas) if top_linhas else "- no data"
 slack_alert_mentions = normalize_slack_user_mentions(slack_alert_user_ids)
 
 mention_line = ""
 if qtd_divergentes > 0 and slack_alert_mentions:
-    mention_line = f"\n*Acao:* {slack_alert_mentions} favor verificar divergencias."
+    mention_line = f"\n*Action:* {slack_alert_mentions} please review differences."
 
 mensagem = (
-    f"{status_emoji} *Reconciliacao Calypso x SAP ({erp_company_code})*\n"
-    f"*Data:* {run_date}\n"
-    f"*Contas monitoradas (Calypso/SAP):* {len(company_config['calypso_accounts'])}/{len(company_config['sap_accounts'])}\n"
-    f"*Contas avaliadas:* {total_accounts}\n"
-    f"*Contas divergentes (>|{tolerance}|):* {qtd_divergentes}\n"
-    f"*Soma das diferencas:* {total_diferenca:,.2f}\n"
-    f"*Diferencas por conta:*\n{resumo}"
+    f"{status_emoji} *Calypso x SAP Reconciliation ({erp_company_code})*\n"
+    f"*Date:* {run_date}\n"
+    f"*Monitored accounts (Calypso/SAP):* {monitored_calypso_accounts}/{monitored_sap_accounts}\n"
+    f"*Monitored unique accounts:* {monitored_unique_accounts}\n"
+    f"*Accounts with activity (run date):* {accounts_with_activity}\n"
+    f"*Accounts without activity (run date):* {accounts_without_activity}\n"
+    f"*Accounts with differences (>|{tolerance}|):* {qtd_divergentes}\n"
+    f"*Net sum of differences:* {total_diferenca:,.2f}\n"
+    f"*Differences by account:*\n{resumo}"
     f"{mention_line}"
 )
 
