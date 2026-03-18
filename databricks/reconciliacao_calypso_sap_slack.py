@@ -3,7 +3,7 @@
 # MAGIC ## Reconciliacao diaria Calypso x SAP com alerta no Slack
 # MAGIC
 # MAGIC Widgets:
-# MAGIC - `run_date` (YYYY-MM-DD) - se vazio, usa penultimo dia util (D-2 util).
+# MAGIC - `run_date` (YYYY-MM-DD) - se vazio, usa penultimo dia util (D-2 util) considerando fim de semana e feriados nacionais BR.
 # MAGIC - `erp_company_code` - empresa alvo (`BR11`, `BR12`, `BR28`).
 # MAGIC - `slack_webhook_secret_scope` - scope do Databricks Secret.
 # MAGIC - `slack_webhook_secret_key` - chave com webhook URL do Slack.
@@ -111,6 +111,57 @@ def to_sql_string_literal_list(values: list[str]) -> str:
     return ", ".join(f"'{v}'" for v in values)
 
 
+NATIONAL_HOLIDAYS_CACHE = {}
+
+
+def easter_sunday(year: int) -> date:
+    # Algoritmo de Meeus/Jones/Butcher para calendario gregoriano.
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def brazil_national_holidays(year: int) -> set[date]:
+    if year in NATIONAL_HOLIDAYS_CACHE:
+        return NATIONAL_HOLIDAYS_CACHE[year]
+
+    easter = easter_sunday(year)
+    holidays = {
+        date(year, 1, 1),   # Confraternizacao Universal
+        easter - timedelta(days=2),  # Paixao de Cristo (Sexta-feira Santa)
+        date(year, 4, 21),  # Tiradentes
+        date(year, 5, 1),   # Dia do Trabalho
+        date(year, 9, 7),   # Independencia do Brasil
+        date(year, 10, 12), # Nossa Senhora Aparecida
+        date(year, 11, 2),  # Finados
+        date(year, 11, 15), # Proclamacao da Republica
+        date(year, 11, 20), # Dia Nacional de Zumbi e da Consciencia Negra
+        date(year, 12, 25), # Natal
+    }
+
+    NATIONAL_HOLIDAYS_CACHE[year] = holidays
+    return holidays
+
+
+def is_business_day(target_date: date) -> bool:
+    return (
+        target_date.weekday() < 5
+        and target_date not in brazil_national_holidays(target_date.year)
+    )
+
+
 def subtract_business_days(base_date: date, business_days: int) -> date:
     if business_days < 0:
         raise ValueError("business_days deve ser >= 0")
@@ -119,7 +170,7 @@ def subtract_business_days(base_date: date, business_days: int) -> date:
     remaining = business_days
     while remaining > 0:
         current -= timedelta(days=1)
-        if current.weekday() < 5:  # 0-4 => segunda a sexta
+        if is_business_day(current):
             remaining -= 1
     return current
 

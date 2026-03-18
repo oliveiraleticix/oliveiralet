@@ -66,7 +66,7 @@ Esperado na listagem: key `reconciliacao_calypso_sap_webhook`.
 
 Widgets esperados:
 
-- `run_date`: data de referencia (`YYYY-MM-DD`); vazio = D-2 util (penultimo dia util, ignorando sabado/domingo).
+- `run_date`: data de referencia (`YYYY-MM-DD`); vazio = D-2 util (penultimo dia util, ignorando sabado/domingo e feriados nacionais BR).
 - `erp_company_code`: empresa da execucao (`BR11`, `BR12`, `BR28`).
 - `slack_webhook_secret_scope`: ex. `monitoring`.
 - `slack_webhook_secret_key`: ex. `reconciliacao_calypso_sap_webhook`.
@@ -81,6 +81,21 @@ As contas ficam versionadas no notebook em `COMPANY_ACCOUNT_CONFIG`.
 - `BR11`: mantem a configuracao original (listas Calypso e SAP ja existentes).
 - `BR12`: `1661011994, 4311021996, 8211031003, 1232011001, 4112011002, 7132021001, 8132021001, 7132021015, 8132021014, 1232011006, 4112011005, 7132031002, 8132031001`.
 - `BR28`: `1661011994, 4311021996, 1232011006, 4112011005, 8211031003, 7132031022, 8132031023, 7132031002, 8132031001`.
+
+### 6.2) Feriados nacionais considerados no D-2 util
+
+- 01/01 Confraternizacao Universal
+- Sexta-feira Santa (data movel, calculada pela Pascoa)
+- 21/04 Tiradentes
+- 01/05 Dia do Trabalho
+- 07/09 Independencia do Brasil
+- 12/10 Nossa Senhora Aparecida
+- 02/11 Finados
+- 15/11 Proclamacao da Republica
+- 20/11 Dia Nacional de Zumbi e da Consciencia Negra
+- 25/12 Natal
+
+> Observacao: feriados estaduais/municipais nao entram automaticamente nessa regra.
 
 ## 7) Teste funcional (antes de agendar)
 
@@ -106,7 +121,7 @@ As contas ficam versionadas no notebook em `COMPANY_ACCOUNT_CONFIG`.
    - task 2: `erp_company_code = BR12`
    - task 3: `erp_company_code = BR28`
 3. Configurar parametros de cada task:
-   - `run_date =` vazio (usa D-2 util automaticamente)
+   - `run_date =` vazio (usa D-2 util automaticamente considerando fim de semana e feriados nacionais BR)
    - `erp_company_code = BR11|BR12|BR28` (conforme task)
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`
