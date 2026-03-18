@@ -66,7 +66,7 @@ Esperado na listagem: key `reconciliacao_calypso_sap_webhook`.
 
 Widgets esperados:
 
-- `run_date`: data de referencia (`YYYY-MM-DD`); vazio = D-1.
+- `run_date`: data de referencia (`YYYY-MM-DD`); vazio = D-2 util (penultimo dia util, ignorando sabado/domingo).
 - `erp_company_code`: empresa da execucao (`BR11`, `BR12`, `BR28`).
 - `slack_webhook_secret_scope`: ex. `monitoring`.
 - `slack_webhook_secret_key`: ex. `reconciliacao_calypso_sap_webhook`.
@@ -106,7 +106,7 @@ As contas ficam versionadas no notebook em `COMPANY_ACCOUNT_CONFIG`.
    - task 2: `erp_company_code = BR12`
    - task 3: `erp_company_code = BR28`
 3. Configurar parametros de cada task:
-   - `run_date =` vazio
+   - `run_date =` vazio (usa D-2 util automaticamente)
    - `erp_company_code = BR11|BR12|BR28` (conforme task)
    - `slack_webhook_secret_scope = monitoring`
    - `slack_webhook_secret_key = reconciliacao_calypso_sap_webhook`

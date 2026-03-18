@@ -3,7 +3,7 @@
 # MAGIC ## Reconciliacao diaria Calypso x SAP com alerta no Slack
 # MAGIC
 # MAGIC Widgets:
-# MAGIC - `run_date` (YYYY-MM-DD) - se vazio, usa ontem.
+# MAGIC - `run_date` (YYYY-MM-DD) - se vazio, usa penultimo dia util (D-2 util).
 # MAGIC - `erp_company_code` - empresa alvo (`BR11`, `BR12`, `BR28`).
 # MAGIC - `slack_webhook_secret_scope` - scope do Databricks Secret.
 # MAGIC - `slack_webhook_secret_key` - chave com webhook URL do Slack.
@@ -110,6 +110,20 @@ def to_sql_string_literal_list(values: list[str]) -> str:
         raise ValueError("Lista de contas vazia. Verifique configuracao da empresa.")
     return ", ".join(f"'{v}'" for v in values)
 
+
+def subtract_business_days(base_date: date, business_days: int) -> date:
+    if business_days < 0:
+        raise ValueError("business_days deve ser >= 0")
+
+    current = base_date
+    remaining = business_days
+    while remaining > 0:
+        current -= timedelta(days=1)
+        if current.weekday() < 5:  # 0-4 => segunda a sexta
+            remaining -= 1
+    return current
+
+
 dbutils.widgets.text("run_date", "")
 dbutils.widgets.dropdown("erp_company_code", "BR11", ["BR11", "BR12", "BR28"])
 dbutils.widgets.text("slack_webhook_secret_scope", "monitoring")
@@ -125,7 +139,7 @@ tolerance = float(dbutils.widgets.get("tolerance").strip() or "0.01")
 slack_alert_user_ids = dbutils.widgets.get("slack_alert_user_ids").strip()
 
 if not run_date:
-    run_date = (date.today() - timedelta(days=1)).isoformat()
+    run_date = subtract_business_days(date.today(), 2).isoformat()
 
 if not re.match(r"^\d{4}-\d{2}-\d{2}$", run_date):
     raise ValueError(f"Formato invalido de run_date: {run_date}. Use YYYY-MM-DD.")

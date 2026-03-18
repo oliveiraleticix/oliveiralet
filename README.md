@@ -8,7 +8,7 @@ Automacao simples de reconciliacao diaria Calypso x SAP no Databricks com envio 
 - `docs/processo_batimento_calypso_sap.md` (runbook detalhado)
 
 Esse arquivo esta no formato de notebook Python para Databricks e faz:
-1. Recebe `run_date` (ou usa D-1).
+1. Recebe `run_date` (ou usa D-2 util).
 2. Executa a query de batimento Calypso x SAP.
 3. Calcula quantidade de contas divergentes e soma de diferencas.
 4. Envia resumo para Slack via webhook salvo em Databricks Secret.
@@ -21,7 +21,7 @@ Esse arquivo esta no formato de notebook Python para Databricks e faz:
    - Key: `reconciliacao_calypso_sap_webhook`
 3. Crie um Job com agendamento diario (ex.: 08:00).
 4. Configure os parametros do notebook no Job:
-   - `run_date` = vazio (usa D-1 automaticamente)
+   - `run_date` = vazio (usa D-2 util automaticamente)
    - `erp_company_code` = `BR11` (opcoes: `BR11`, `BR12`, `BR28`)
    - `slack_webhook_secret_scope` = `monitoring`
    - `slack_webhook_secret_key` = `reconciliacao_calypso_sap_webhook`
