@@ -12,6 +12,8 @@ Automacao simples de reconciliacao diaria Calypso x SAP no Databricks com envio 
 - `docs/presentation_detalhada_12slides_pt.md` (versao detalhada PT-BR)
 - `docs/presentation_executive_5slides_en.md` (executive version EN)
 - `docs/presentation_detailed_12slides_en.md` (detailed version EN)
+- `docs/presentation_reconciliacao_pt.html` (template HTML PT-BR com placeholders de imagens)
+- `docs/presentation_reconciliation_en.html` (template HTML EN with image placeholders)
 
 Esse arquivo esta no formato de notebook Python para Databricks e faz:
 1. Recebe `run_date` (ou usa D-2 util considerando fim de semana e feriados nacionais BR).

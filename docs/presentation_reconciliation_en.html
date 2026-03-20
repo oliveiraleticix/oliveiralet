@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calypso x SAP Reconciliation Automation</title>
+  <style>
+    :root {
+      --nu-purple: #820ad1;
+      --nu-purple-light: #b266ff;
+      --bg: #111111;
+      --card: #1a1a1a;
+      --text: #ffffff;
+      --muted: #b3b3b3;
+      --success: #00c48c;
+      --warning: #ffb020;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top right, #2a1240 0%, var(--bg) 40%);
+      color: var(--text);
+    }
+
+    .deck {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .slide {
+      display: none;
+      width: min(1100px, 95vw);
+      min-height: 78vh;
+      padding: 40px 48px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
+      border: 1px solid #2a2a2a;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+    }
+
+    .slide.active { display: block; }
+
+    .kicker {
+      color: var(--nu-purple-light);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1, h2 { margin: 0 0 18px; line-height: 1.15; }
+    h1 { font-size: clamp(36px, 5vw, 56px); }
+    h2 { font-size: clamp(30px, 4.2vw, 44px); }
+
+    p, li {
+      font-size: clamp(20px, 2vw, 28px);
+      line-height: 1.45;
+      color: var(--text);
+      margin: 0 0 10px;
+    }
+
+    ul { margin: 8px 0 0 24px; }
+    li { margin-bottom: 8px; }
+    .muted { color: var(--muted); }
+    .purple { color: var(--nu-purple-light); }
+
+    .badge-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 18px;
+      font-weight: 700;
+      border: 1px solid #3a3a3a;
+      background: #202020;
+    }
+
+    .badge.success { color: var(--success); border-color: rgba(0, 196, 140, 0.35); }
+    .badge.warn { color: var(--warning); border-color: rgba(255, 176, 32, 0.35); }
+    .badge.purple { color: var(--nu-purple-light); border-color: rgba(178, 102, 255, 0.35); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 18px;
+    }
+
+    .box {
+      border: 1px solid #2f2f2f;
+      border-radius: 14px;
+      padding: 18px;
+      background: #1f1f1f;
+    }
+
+    .image-slot {
+      margin-top: 18px;
+      border: 2px dashed #5a5a5a;
+      border-radius: 14px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 16px;
+    }
+
+    .controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .btn {
+      background: #1f1f1f;
+      color: white;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn:hover { border-color: var(--nu-purple-light); }
+    .counter {
+      font-size: 14px;
+      color: var(--muted);
+      min-width: 88px;
+      text-align: center;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 900px) {
+      .slide { padding: 24px; min-height: 82vh; }
+      .grid-2 { grid-template-columns: 1fr; }
+      p, li { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <section class="slide active">
+      <div class="kicker">Futures | Finance Ops</div>
+      <h1>From manual checks to a smart flow</h1>
+      <p class="purple">New daily Calypso x SAP reconciliation</p>
+      <p class="muted">How we improved speed, predictability, and pre-closing quality.</p>
+      <div class="badge-row">
+        <span class="badge purple">Databricks + Slack</span>
+        <span class="badge success">~1.5 hours saved per week</span>
+      </div>
+      <div class="image-slot">
+        Add a screenshot of the official Slack channel here.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Before</div>
+      <h2>What was painful in the manual process?</h2>
+      <ul>
+        <li>Recurring checks with high operational effort</li>
+        <li>Execution variability and dependency on individual context</li>
+        <li>Time spent on low-value repetitive tasks</li>
+        <li>Slower response before pre-closing</li>
+      </ul>
+      <div class="badge-row">
+        <span class="badge warn">Manual operational risk</span>
+        <span class="badge">Slower mismatch response</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Change</div>
+      <h2>What we automated</h2>
+      <ul>
+        <li>Daily reconciliation between Calypso and SAP</li>
+        <li>Same logic for BR11, BR12, BR28 (parameterized)</li>
+        <li>Automatic Slack alert with account-level details</li>
+        <li>Automatic owner mention when differences exist</li>
+      </ul>
+      <div class="image-slot">
+        Add a screenshot of the Databricks Job with the 3 tasks.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">How it works</div>
+      <h2>End-to-end daily flow</h2>
+      <div class="grid-2">
+        <div class="box">
+          <p><strong>1.</strong> Daily Job runs the notebook in Databricks</p>
+          <p><strong>2.</strong> SQL compares debit/credit by account</p>
+          <p><strong>3.</strong> Status: ✅ no differences / ⚠️ differences found</p>
+          <p><strong>4.</strong> Automatic Slack notification</p>
+        </div>
+        <div class="box">
+          <p><strong>Default date rule</strong></p>
+          <p class="muted">Empty run_date = second prior business day, including weekends + BR national holidays.</p>
+          <p><strong>Security</strong></p>
+          <p class="muted">Webhook stored in Databricks Secrets.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Output</div>
+      <h2>What the Slack message contains</h2>
+      <ul>
+        <li>Entity and processing date</li>
+        <li>Monitored accounts (Calypso/SAP)</li>
+        <li>Accounts with activity / without activity</li>
+        <li>Accounts with differences + net sum</li>
+        <li>Differences by account (prioritized)</li>
+      </ul>
+      <div class="image-slot">
+        Add a screenshot of the full English Slack message.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Impact</div>
+      <h2>Business value already captured</h2>
+      <div class="badge-row">
+        <span class="badge success">~1.5h/week saved</span>
+        <span class="badge purple">Faster pre-closing</span>
+        <span class="badge">Higher operational predictability</span>
+      </div>
+      <ul style="margin-top:18px;">
+        <li>Less recurring manual effort</li>
+        <li>More daily transparency in the official channel</li>
+        <li>Scalable for new entities and rules</li>
+      </ul>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Governance</div>
+      <h2>Reliability and control</h2>
+      <ul>
+        <li>Single notebook, versioned logic in Git</li>
+        <li>Task-level parameters in Job (no code duplication)</li>
+        <li>Runbook for operations and troubleshooting</li>
+        <li>Execution traceability in Databricks Jobs</li>
+      </ul>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Closing</div>
+      <h2>Next steps</h2>
+      <ul>
+        <li>Add state/municipal holidays by parameter (if needed)</li>
+        <li>Build a historical dashboard of differences</li>
+        <li>Define SLA by mismatch severity</li>
+      </ul>
+      <p class="purple" style="margin-top:20px;"><strong>Final message:</strong> automation frees time for higher-impact analysis and decisions.</p>
+      <p class="footer-note">Shortcuts: left/right arrows, space, and backspace.</p>
+    </section>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="prevBtn">◀ Prev</button>
+    <div class="counter" id="counter">1 / 8</div>
+    <button class="btn" id="nextBtn">Next ▶</button>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counter = document.getElementById("counter");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let current = 0;
+
+    function render() {
+      slides.forEach((slide, idx) => slide.classList.toggle("active", idx === current));
+      counter.textContent = `${current + 1} / ${slides.length}`;
+    }
+
+    function next() {
+      current = Math.min(current + 1, slides.length - 1);
+      render();
+    }
+
+    function prev() {
+      current = Math.max(current - 1, 0);
+      render();
+    }
+
+    prevBtn.addEventListener("click", prev);
+    nextBtn.addEventListener("click", next);
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", " ", "PageDown"].includes(event.key)) {
+        event.preventDefault();
+        next();
+      } else if (["ArrowLeft", "Backspace", "PageUp"].includes(event.key)) {
+        event.preventDefault();
+        prev();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

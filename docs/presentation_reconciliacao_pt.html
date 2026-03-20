@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Automacao Reconciliacao Calypso x SAP</title>
+  <style>
+    :root {
+      --nu-purple: #820ad1;
+      --nu-purple-light: #b266ff;
+      --bg: #111111;
+      --card: #1a1a1a;
+      --text: #ffffff;
+      --muted: #b3b3b3;
+      --success: #00c48c;
+      --warning: #ffb020;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top right, #2a1240 0%, var(--bg) 40%);
+      color: var(--text);
+    }
+
+    .deck {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .slide {
+      display: none;
+      width: min(1100px, 95vw);
+      min-height: 78vh;
+      padding: 40px 48px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #1b1b1b 0%, #151515 100%);
+      border: 1px solid #2a2a2a;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+    }
+
+    .slide.active { display: block; }
+
+    .kicker {
+      color: var(--nu-purple-light);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1, h2 { margin: 0 0 18px; line-height: 1.15; }
+    h1 { font-size: clamp(36px, 5vw, 56px); }
+    h2 { font-size: clamp(30px, 4.2vw, 44px); }
+
+    p, li {
+      font-size: clamp(20px, 2vw, 28px);
+      line-height: 1.45;
+      color: var(--text);
+      margin: 0 0 10px;
+    }
+
+    ul { margin: 8px 0 0 24px; }
+    li { margin-bottom: 8px; }
+    .muted { color: var(--muted); }
+    .purple { color: var(--nu-purple-light); }
+
+    .badge-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 18px;
+      font-weight: 700;
+      border: 1px solid #3a3a3a;
+      background: #202020;
+    }
+
+    .badge.success { color: var(--success); border-color: rgba(0, 196, 140, 0.35); }
+    .badge.warn { color: var(--warning); border-color: rgba(255, 176, 32, 0.35); }
+    .badge.purple { color: var(--nu-purple-light); border-color: rgba(178, 102, 255, 0.35); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 18px;
+    }
+
+    .box {
+      border: 1px solid #2f2f2f;
+      border-radius: 14px;
+      padding: 18px;
+      background: #1f1f1f;
+    }
+
+    .image-slot {
+      margin-top: 18px;
+      border: 2px dashed #5a5a5a;
+      border-radius: 14px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 16px;
+    }
+
+    .controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .btn {
+      background: #1f1f1f;
+      color: white;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn:hover { border-color: var(--nu-purple-light); }
+    .counter {
+      font-size: 14px;
+      color: var(--muted);
+      min-width: 88px;
+      text-align: center;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 900px) {
+      .slide { padding: 24px; min-height: 82vh; }
+      .grid-2 { grid-template-columns: 1fr; }
+      p, li { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <section class="slide active">
+      <div class="kicker">Futuros | Finance Ops</div>
+      <h1>Da planilha ao fluxo inteligente</h1>
+      <p class="purple">Nova reconciliacao diaria Calypso x SAP</p>
+      <p class="muted">Como ganhamos velocidade, previsibilidade e qualidade no pre-closing.</p>
+      <div class="badge-row">
+        <span class="badge purple">Databricks + Slack</span>
+        <span class="badge success">~1h30 de saving semanal</span>
+      </div>
+      <div class="image-slot">
+        Adicione aqui um print do canal Slack oficial (mensagem de status).
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Antes</div>
+      <h2>O que doia no processo manual?</h2>
+      <ul>
+        <li>Checagem recorrente e operacionalmente custosa</li>
+        <li>Variacao na execucao e dependencia de contexto individual</li>
+        <li>Tempo gasto em atividade de baixo valor analitico</li>
+        <li>Menor velocidade para reagir antes do pre-closing</li>
+      </ul>
+      <div class="badge-row">
+        <span class="badge warn">Risco operacional manual</span>
+        <span class="badge">Resposta mais lenta a divergencias</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Mudanca</div>
+      <h2>O que automatizamos</h2>
+      <ul>
+        <li>Reconciliacao diaria entre Calypso e SAP</li>
+        <li>Mesma logica para BR11, BR12 e BR28 (parametrizada)</li>
+        <li>Alerta automatico no Slack com detalhe por conta</li>
+        <li>Mention de responsaveis quando ha diferenca</li>
+      </ul>
+      <div class="image-slot">
+        Adicione aqui um print do Job com as 3 tasks (BR11, BR12, BR28).
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Como funciona</div>
+      <h2>Fluxo diario ponta a ponta</h2>
+      <div class="grid-2">
+        <div class="box">
+          <p><strong>1.</strong> Job diario executa notebook no Databricks</p>
+          <p><strong>2.</strong> Query compara debitado/creditado por conta</p>
+          <p><strong>3.</strong> Classificacao: ✅ sem diferenca / ⚠️ com diferenca</p>
+          <p><strong>4.</strong> Envio automatico para Slack</p>
+        </div>
+        <div class="box">
+          <p><strong>Regra de data default</strong></p>
+          <p class="muted">run_date vazio = D-2 util, com fim de semana + feriados nacionais BR.</p>
+          <p><strong>Seguranca</strong></p>
+          <p class="muted">Webhook armazenado em Databricks Secrets.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Resultado</div>
+      <h2>O que a mensagem no Slack explica</h2>
+      <ul>
+        <li>Empresa e data processada</li>
+        <li>Monitored accounts (Calypso/SAP)</li>
+        <li>Accounts with activity / without activity</li>
+        <li>Accounts with differences e net sum of differences</li>
+        <li>Differences by account (priorizadas)</li>
+      </ul>
+      <div class="image-slot">
+        Adicione aqui um print da mensagem completa em ingles.
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Impacto</div>
+      <h2>Valor ja capturado para o time</h2>
+      <div class="badge-row">
+        <span class="badge success">~1h30/semana poupadas</span>
+        <span class="badge purple">Pre-closing mais rapido</span>
+        <span class="badge">Mais previsibilidade operacional</span>
+      </div>
+      <ul style="margin-top:18px;">
+        <li>Menos trabalho manual recorrente</li>
+        <li>Mais transparencia diaria no canal oficial</li>
+        <li>Escalabilidade para novas regras e empresas</li>
+      </ul>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Governanca</div>
+      <h2>Confiabilidade e controle</h2>
+      <ul>
+        <li>Notebook unico, logica versionada no Git</li>
+        <li>Parametros por task no Job (sem duplicar codigo)</li>
+        <li>Runbook tecnico-operacional e troubleshooting documentados</li>
+        <li>Historico de execucoes no Databricks para auditoria</li>
+      </ul>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Encerramento</div>
+      <h2>Proximos passos</h2>
+      <ul>
+        <li>Incluir feriados estaduais/municipais por parametro (se necessario)</li>
+        <li>Painel historico de divergencias por empresa</li>
+        <li>SLA por severidade para tratativa de alertas</li>
+      </ul>
+      <p class="purple" style="margin-top:20px;"><strong>Mensagem final:</strong> automatizacao libera tempo para analise e decisao de maior impacto.</p>
+      <p class="footer-note">Atalhos: setas esquerda/direita, espaco e backspace.</p>
+    </section>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="prevBtn">◀ Prev</button>
+    <div class="counter" id="counter">1 / 8</div>
+    <button class="btn" id="nextBtn">Next ▶</button>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counter = document.getElementById("counter");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let current = 0;
+
+    function render() {
+      slides.forEach((slide, idx) => slide.classList.toggle("active", idx === current));
+      counter.textContent = `${current + 1} / ${slides.length}`;
+    }
+
+    function next() {
+      current = Math.min(current + 1, slides.length - 1);
+      render();
+    }
+
+    function prev() {
+      current = Math.max(current - 1, 0);
+      render();
+    }
+
+    prevBtn.addEventListener("click", prev);
+    nextBtn.addEventListener("click", next);
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", " ", "PageDown"].includes(event.key)) {
+        event.preventDefault();
+        next();
+      } else if (["ArrowLeft", "Backspace", "PageUp"].includes(event.key)) {
+        event.preventDefault();
+        prev();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
