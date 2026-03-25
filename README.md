@@ -6,6 +6,8 @@ Automacao simples de reconciliacao diaria Calypso x SAP no Databricks com envio 
 
 - `databricks/reconciliacao_calypso_sap_slack.py`
 - `docs/processo_batimento_calypso_sap.md` (runbook detalhado)
+- `databricks/mtm_ndf_holdings_quicksight.sql` (view mensal automatizada para dashboard QuickSight)
+- `docs/dashboard_mtm_ndf_holdings_quicksight.md` (runbook do dashboard MTM NDF Holdings)
 
 Esse arquivo esta no formato de notebook Python para Databricks e faz:
 1. Recebe `run_date` (ou usa D-2 util considerando fim de semana e feriados nacionais BR).
