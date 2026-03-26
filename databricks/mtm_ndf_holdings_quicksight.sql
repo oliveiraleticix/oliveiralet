@@ -19,36 +19,56 @@ WITH seed_dez_2025 AS (
   SELECT DATE '2025-12-31', 'NU HOLDINGS HEDGE BOOK', 8457201.23 UNION ALL
   SELECT DATE '2025-12-31', 'NU HOLDINGS HEDGE BOOK', 8584534.82
 ),
-raw_ndf AS (
+ndf_source AS (
   SELECT
     b1.base_date,
-    b2.book,
+    b1.instrumento,
+    CAST(regexp_extract(b1.id_posicao, '([0-9]+)', 1) AS BIGINT) AS position_id,
     b1.mtm AS mtm_value
   FROM usr.market_risk.pricing_consolidated_holdings_v2 b1
-  LEFT JOIN br__dataset.calypso_positions_report_bonds_latest b2
-    ON  b1.base_date = b2.reference_date
-    AND b1.instrumento = b2.product_description
-    AND CAST(regexp_substr(b1.id_posicao, '[0-9]+') AS BIGINT) = b2.position_id
   WHERE LOWER(b1.source) = 'ndf'
     AND b1.instrumento LIKE 'FXNDF%'
-    AND b2.book IS NOT NULL
 ),
 month_close_dates AS (
   -- "Fechamento mensal" = ultimo dia com dado disponivel no mes (normalmente ultimo dia util).
   SELECT
     date_trunc('month', base_date) AS month_ref,
     MAX(base_date) AS snapshot_date
-  FROM raw_ndf
+  FROM ndf_source
   GROUP BY 1
+),
+positions_book_map AS (
+  -- Usa o mapeamento mais recente de book por (position_id, produto), sem depender de reference_date.
+  SELECT
+    position_id,
+    product_description,
+    book
+  FROM (
+    SELECT
+      position_id,
+      product_description,
+      book,
+      reference_date,
+      ROW_NUMBER() OVER (
+        PARTITION BY position_id, product_description
+        ORDER BY reference_date DESC
+      ) AS rn
+    FROM br__dataset.calypso_positions_report_bonds_latest
+    WHERE book IS NOT NULL
+  ) t
+  WHERE rn = 1
 ),
 monthly_from_source AS (
   SELECT
     d.snapshot_date,
-    r.book,
-    SUM(r.mtm_value) AS mtm_value
-  FROM raw_ndf r
+    COALESCE(m.book, 'UNMAPPED BOOK') AS book,
+    SUM(s.mtm_value) AS mtm_value
+  FROM ndf_source s
   INNER JOIN month_close_dates d
-    ON r.base_date = d.snapshot_date
+    ON s.base_date = d.snapshot_date
+  LEFT JOIN positions_book_map m
+    ON s.position_id = m.position_id
+   AND s.instrumento = m.product_description
   GROUP BY 1, 2
 ),
 month_close_with_seed AS (
@@ -59,7 +79,7 @@ month_close_with_seed AS (
   FROM seed_dez_2025
 ),
 books AS (
-  SELECT DISTINCT book FROM raw_ndf
+  SELECT DISTINCT book FROM monthly_from_source
   UNION
   SELECT DISTINCT book FROM seed_dez_2025
 ),
