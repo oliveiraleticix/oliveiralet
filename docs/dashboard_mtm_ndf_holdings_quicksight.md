@@ -21,7 +21,7 @@ Script de criacao:
 
 Essa view:
 
-1. Le dados de `usr.market_risk.pricing_consolidated_holdings_v2` (source = `ndf`, instrumento `FXNDF%`);
+1. Le dados de `usr.market_risk.pricing_consolidated_holdings_v2` (instrumento `FXNDF%`);
 2. Enriquecimento de `book` via `br__dataset.calypso_positions_report_bonds_latest`;
 3. Seleciona automaticamente o ultimo `base_date` disponivel de cada mes;
 4. Mantem seed historico de dez/2025 (baseline validado);

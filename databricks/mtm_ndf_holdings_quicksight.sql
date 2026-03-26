@@ -26,8 +26,7 @@ ndf_source AS (
     CAST(regexp_extract(b1.id_posicao, '([0-9]+)', 1) AS BIGINT) AS position_id,
     b1.mtm AS mtm_value
   FROM usr.market_risk.pricing_consolidated_holdings_v2 b1
-  WHERE LOWER(b1.source) = 'ndf'
-    AND b1.instrumento LIKE 'FXNDF%'
+  WHERE b1.instrumento LIKE 'FXNDF%'
 ),
 month_close_dates AS (
   -- "Fechamento mensal" = ultimo dia com dado disponivel no mes (normalmente ultimo dia util).
