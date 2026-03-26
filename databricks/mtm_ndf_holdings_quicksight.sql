@@ -85,7 +85,7 @@ final_enriched AS (
   SELECT
     snapshot_date,
     date_trunc('month', snapshot_date) AS month_ref,
-    date_format(snapshot_date, '%Y-%m') AS month_label,
+    date_format(snapshot_date, 'yyyy-MM') AS month_label,
     year(snapshot_date) AS year_ref,
     month(snapshot_date) AS month_num,
     book,
